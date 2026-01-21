@@ -135,6 +135,22 @@ async = ["asgiref (>=3.2)"]
 dotenv = ["python-dotenv"]
 
 [[package]]
+name = "flask-cors"
+version = "6.0.2"
+description = "A Flask extension simplifying CORS support"
+optional = false
+python-versions = "<4.0,>=3.9"
+groups = ["main"]
+files = [
+    {file = "flask_cors-6.0.2-py3-none-any.whl", hash = "sha256:e57544d415dfd7da89a9564e1e3a9e515042df76e12130641ca6f3f2f03b699a"},
+    {file = "flask_cors-6.0.2.tar.gz", hash = "sha256:6e118f3698249ae33e429760db98ce032a8bf9913638d085ca0f4c5534ad2423"},
+]
+
+[package.dependencies]
+flask = ">=0.9"
+Werkzeug = ">=0.7"
+
+[[package]]
 name = "flask-jwt-extended"
 version = "4.7.1"
 description = "Extended JWT integration with Flask"
@@ -153,6 +169,22 @@ Werkzeug = ">=0.14"
 
 [package.extras]
 asymmetric-crypto = ["cryptography (>=3.3.1)"]
+
+[[package]]
+name = "flask-mail"
+version = "0.10.0"
+description = "Flask extension for sending email"
+optional = false
+python-versions = ">=3.8"
+groups = ["main"]
+files = [
+    {file = "flask_mail-0.10.0-py3-none-any.whl", hash = "sha256:a451e490931bb3441d9b11ebab6812a16bfa81855792ae1bf9c1e1e22c4e51e7"},
+    {file = "flask_mail-0.10.0.tar.gz", hash = "sha256:44083e7b02bbcce792209c06252f8569dd5a325a7aaa76afe7330422bd97881d"},
+]
+
+[package.dependencies]
+blinker = "*"
+flask = "*"
 
 [[package]]
 name = "flask-migrate"
@@ -821,4 +853,4 @@ watchdog = ["watchdog (>=2.3)"]
 [metadata]
 lock-version = "2.1"
 python-versions = ">=3.10,<4"
-content-hash = "c6b7e168f80bd0d94346d9ab9cc5cbf01e5ec64373f5afe3b08b7d515cec98ad"
+content-hash = "6f4483bb2a8e73ab1f835aba274ae051317b153a92e74b2895fe0598fdc834e2"
