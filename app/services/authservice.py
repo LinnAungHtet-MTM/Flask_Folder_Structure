@@ -2,16 +2,10 @@ from datetime import datetime, timedelta
 from app.dao.password_reset_dao import PasswordResetDao
 from app.extension import db
 from app.utils.email_util import send_email
-import jwt
 from werkzeug.security import check_password_hash, generate_password_hash
 from flask_jwt_extended import create_access_token, decode_token
 from app.dao.userdao import UserDao
-import os
 import hashlib
-from dotenv import load_dotenv
-
-load_dotenv()
-
 
 class AuthService:
 
@@ -33,21 +27,27 @@ class AuthService:
                 "message": "Invalid credentials"
             }
 
+        if user.lock_flg :
+            return {
+                "field": "password",
+                "success": False,
+                "message": "Your Account has been locked"
+            }
+
         # update last login
         user.last_login_at = datetime.utcnow()
         db.session.commit()
 
-        token = create_access_token(identity=str(user.id))
+        token = create_access_token(
+            identity = str(user.id),
+            additional_claims = {
+                "role": user.role
+            })
 
         return {
             "success": True,
             "data": {
                 "access_token": token,
-                "user": {
-                    "id": user.id,
-                    "name": user.name,
-                    "email": user.email
-                }
             }
         }
 
@@ -166,7 +166,7 @@ class AuthService:
                 "message": "Token already used or invalid"
             }
 
-        # 🔹 Update user password
+        # Update user password
         user = UserDao.find_by_email(decoded["sub"])
         if not user:
             return {
@@ -178,12 +178,11 @@ class AuthService:
         user.password = generate_password_hash(payload.password)
         db.session.commit()
 
-        # 🔹 Invalidate token
+        # Invalidate token
         reset.deleted_at = datetime.utcnow()
         db.session.commit()
 
         return {"success": True}
-
 
     @staticmethod
     def hash_token(token: str) -> str:

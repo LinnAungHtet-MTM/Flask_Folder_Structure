@@ -1,12 +1,7 @@
-from app.dao.password_reset_dao import PasswordResetDao
-from app.dao.userdao import UserDao
-from app.services import authservice
 from app.services.authservice import AuthService
 from flask import request, jsonify
-from flask_jwt_extended import decode_token
 from pydantic import ValidationError
 from app.requests.authrequest import ForgotPasswordRequest, LoginRequest, ResetPasswordRequest, VerifyResetTokenRequest
-
 
 class AuthController:
     def login():
@@ -138,22 +133,3 @@ class AuthController:
             "success": True,
             "message": "Password Updated Successfully"
         }), 200
-
-
-
-    # @staticmethod
-    # def reset_password():
-    #     data = request.get_json()
-    #     token = data.get("token")
-    #     new_password = data.get("password")
-
-    #     email = AuthService.verify_reset_token(token)
-    #     if not email:
-    #         return jsonify({"success": False, "message": "Invalid or expired token"}), 400
-
-    #     user = UserDao.find_by_email(email)
-    #     user.password = generate_password_hash(new_password)
-    #     user.save()  # or db.session.commit()
-    #     PasswordResetDao.delete_by_token(token)
-
-    #     return jsonify({"success": True, "message": "Password updated successfully"}), 200

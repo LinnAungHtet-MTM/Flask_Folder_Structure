@@ -9,6 +9,7 @@ from flask_migrate import Migrate
 from routes.api import api
 from routes.auth import auth
 from config.logging import file_handler
+from config import cloudinary
 
 app = Flask(__name__)
 
@@ -18,7 +19,7 @@ CORS(app, **CORS_CONFIG)
 # Register file-based logger
 app.logger.addHandler(file_handler)
 
-# Database & JWT config
+# Database, JWT & Mail config
 app.config.from_object(DBConfig)
 app.config.from_object(JWTConfig)
 app.config.from_object(MailConfig)
@@ -35,7 +36,6 @@ from app.models import *
 # Register blueprints
 app.register_blueprint(auth, url_prefix = '/auth')
 app.register_blueprint(api, url_prefix = '/api')
-# app.register_blueprint(api, url_prefix="/api")
 
 if __name__ == '__main__':
     app.run(debug=True)
