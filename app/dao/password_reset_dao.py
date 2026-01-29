@@ -7,7 +7,6 @@ class PasswordResetDao:
     def create(email: str, token: str):
         record = PasswordReset(email=email, token=token)
         db.session.add(record)
-        db.session.commit()
         return record
 
     @staticmethod
@@ -22,9 +21,3 @@ class PasswordResetDao:
     def find_by_token(token: str):
         return PasswordReset.query.filter_by(token=token, deleted_at=None).first()
 
-    @staticmethod
-    def delete_by_token(token: str):
-        record = PasswordResetDao.find_by_token(token)
-        if record:
-            record.deleted_at = datetime.utcnow()
-            db.session.commit()

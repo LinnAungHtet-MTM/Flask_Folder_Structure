@@ -1,4 +1,5 @@
 from app.dao.userdao import UserDao
+from app.exceptions.business_exception import BusinessException
 from app.utils.file_upload import allowed_file
 from werkzeug.security import generate_password_hash
 import cloudinary.uploader
@@ -19,6 +20,7 @@ class UserService:
 
         created_user = None
         updated_user = None
+
         if user.create_user_id:
             created_user = UserDao.find_by_id(user.create_user_id)
             if created_user:
@@ -52,18 +54,12 @@ class UserService:
         users = UserDao.find_by_ids(payload.user_ids)
 
         if not users:
-            return {
-                "success": False,
-                "field": "user_ids",
-                "message": "Users not found"
-            }
+            raise BusinessException(
+                field="user_ids",
+                message="User not found"
+            )
 
         UserDao.update_lock_status(users, payload.lock_flg)
-
-        return {
-            "success": True,
-            "message": "Account updated successfully"
-        }
 
     @staticmethod
     def create_user(payload, files, login_user_id):
@@ -71,26 +67,25 @@ class UserService:
         user_exist = UserDao.find_by_email_or_name(payload.email, payload.name)
         if user_exist:
             if user_exist.email == payload.email:
-                field = "email"
-                message = "Email already exists"
-            elif user_exist.name == payload.name:
-                field = "name"
-                message = "Name already exists"
-            return {
-                "success": False,
-                "field": field,
-                "message": message
-            }
+                raise BusinessException(
+                    field="email",
+                    message="Email already exists"
+                )
+            if user_exist.name == payload.name:
+                raise BusinessException(
+                    field="name",
+                    message="Name already exists"
+                )
 
         # File validation
         profile = files.get("profile")
+        profile_url = None
 
         if profile and not allowed_file:
-            return jsonify([
-                {"loc": ["profile"], "msg": "Invalid file type"}
-            ]), 422
-
-        profile_url = None
+            raise BusinessException(
+                field="profile",
+                message="Invalid file type"
+            )
 
         if profile:
             upload_result = cloudinary.uploader.upload(
@@ -114,38 +109,31 @@ class UserService:
             create_user_id=login_user_id
         )
 
-        return {
-            "success": True,
-            'data': user
-        }
+        return user
 
     @staticmethod
     def update_user(user_id, payload, files, login_user_id):
         # check user exists
         user = UserDao.find_by_id(user_id)
         if not user:
-            return {
-                "success": False,
-                "field": "user_id",
-                "message": "User not found",
-                "status": 404
-            }
+            raise BusinessException(
+                field="user_id",
+                message="User not found"
+            )
 
         # Email & Name duplicate check
         user_exist = UserDao.find_by_email_or_name_exclude_current_user(payload.email, payload.name, user.id)
         if user_exist:
             if user_exist.email == payload.email:
-                field = "email"
-                message = "Email already exists"
-            else:
-                field = "name"
-                message = "Name already exists"
-            return {
-                "success": False,
-                "field": field,
-                "message": message,
-                "status": 422
-            }
+                raise BusinessException(
+                    field="email",
+                    message="Email already exists"
+                )
+            if user_exist.name == payload.name:
+                raise BusinessException(
+                    field="name",
+                    message="Name already exists"
+                )
 
         # File validation
         profile_url = None
@@ -153,12 +141,10 @@ class UserService:
 
         if profile:
             if not allowed_file(profile.filename):
-                return {
-                    "success": False,
-                    "field": "profile",
-                    "message": "Invalid file type",
-                    "status": 422
-                }
+                raise BusinessException(
+                    field="profile",
+                    message="Invalid file type"
+                )
 
             upload_result = cloudinary.uploader.upload(
                 profile,
@@ -166,8 +152,7 @@ class UserService:
                 resource_type="image"
             )
             profile_url = upload_result["secure_url"]
-
-        user.profile_path = profile_url
+            user.profile_path = profile_url
 
         user = UserDao.update_user(
             user,
@@ -180,25 +165,16 @@ class UserService:
             updated_user_id=login_user_id
         )
 
-        return {
-            "success": True,
-            'data': user
-        }
+        return user
 
     @staticmethod
-    def delete_user(user_ids):
+    def delete_user(user_ids, login_user_id):
         users = UserDao.find_by_ids(user_ids)
 
         if not users:
-            return {
-                "success": False,
-                "field": "user_ids",
-                "message": "Users not found"
-            }
+            raise BusinessException(
+                field="user_ids",
+                message="User not found"
+            )
 
-        UserDao.delete_users(users)
-
-        return {
-            "success": True,
-            "message": "User deleted successfully"
-        }
+        UserDao.delete_users(users, login_user_id)

@@ -1,34 +1,20 @@
+from app.core.transactional import transactional
+from app.extension import db
 from app.services.authservice import AuthService
 from flask import request, jsonify
 from pydantic import ValidationError
+from flask_jwt_extended import jwt_required, get_jwt_identity
 from app.requests.authrequest import ForgotPasswordRequest, LoginRequest, ResetPasswordRequest, VerifyResetTokenRequest
 
 class AuthController:
+
+    # Login
+    @staticmethod
+    @transactional
     def login():
-        try:
-            payload = LoginRequest(**request.get_json())
-        except ValidationError as e:
-            return jsonify(
-                [
-                    {"loc": err["loc"], "msg": err["msg"]}
-                    for err in e.errors()
-                ]
-            ), 422
-
+        payload = LoginRequest(**request.get_json())
         result = AuthService.login(payload)
-
-        if not result["success"]:
-            return jsonify(
-                [
-                    {
-                        "loc": [
-                            result["field"]
-                        ],
-                        "success": False,
-                        "msg": result["message"]
-                    }
-                ]
-            ), 422
+        db.session.commit()
 
         return jsonify({
             "success": True,
@@ -36,39 +22,40 @@ class AuthController:
             "message": "Login successful"
         }), 200
 
-    @staticmethod
-    def forgot_password():
-        try:
-            payload = ForgotPasswordRequest(**request.get_json())
-        except ValidationError as e:
-            return jsonify(
-                [
-                    {"loc": err["loc"], "msg": err["msg"]}
-                    for err in e.errors()
-                ]
-            ), 422
 
-        result = AuthService.forgot_password(payload)
+    # Generate Refresh Token
+    @staticmethod
+    @jwt_required(refresh=True)
+    def refresh():
+        user_id = int(get_jwt_identity())
+        result = AuthService.refresh_token(user_id)
 
         if not result["success"]:
-            return jsonify(
-                [
-                    {
-                        "loc": [
-                            result["field"]
-                        ],
-                        "success": False,
-                        "msg": result["message"]
-                    }
-                ]
-            ), 422
+            return jsonify({
+                "success": False,
+                "message": result["message"]
+            }), 401
 
         return jsonify({
             "success": True,
-            "data": result["data"],
+            "data": result["data"]
+        }), 200
+
+
+    # Forgot Password
+    @staticmethod
+    @transactional
+    def forgot_password():
+        payload = ForgotPasswordRequest(**request.get_json())
+        AuthService.forgot_password(payload)
+
+        return jsonify({
+            "success": True,
             "message": "Reset password link send to your email"
         }), 200
 
+
+    # Verify Reset Toeken
     @staticmethod
     def verify_reset_token():
         try:
@@ -103,31 +90,13 @@ class AuthController:
             "message": "Valid Token"
         }), 200
 
+
+    # Reset Password
     @staticmethod
+    @transactional
     def reset_password():
-        try:
-            payload = ResetPasswordRequest(**request.get_json())
-        except ValidationError as e:
-            print(e.errors())
-            return jsonify(
-                [
-                    {"loc": err["loc"], "msg": err["msg"]}
-                    for err in e.errors()
-                ]
-            ), 422
-
-        result = AuthService.reset_password(payload)
-
-        if not result["success"]:
-            return jsonify(
-                [
-                    {
-                        "loc": [result["field"]],
-                        "success": False,
-                        "msg": result["message"]
-                    }
-                ]
-            ), 401
+        payload = ResetPasswordRequest(**request.get_json())
+        AuthService.reset_password(payload)
 
         return jsonify({
             "success": True,

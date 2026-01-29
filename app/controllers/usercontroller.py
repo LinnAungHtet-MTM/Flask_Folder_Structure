@@ -1,3 +1,4 @@
+from app.core.transactional import transactional
 from app.models.user import User
 from app.requests.userrequest import CreateUserRequest, LockUsersRequest, UpdateUserRequest, UserSearchRequest
 from app.services.authservice import AuthService
@@ -7,7 +8,9 @@ from pydantic import ValidationError
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from app.middlewares.role_permission import role_permission
 
+
 class UserController:
+
     @staticmethod
     @jwt_required()
     def get_login_user():
@@ -71,11 +74,11 @@ class UserController:
         per_page = request.args.get("per_page", 10, type=int)
 
         pagination = UserService.search_users(
-            name = payload.name,
-            email = payload.email,
-            role = payload.role,
-            start_date = payload.start_date,
-            end_date = payload.end_date,
+            name=payload.name,
+            email=payload.email,
+            role=payload.role,
+            start_date=payload.start_date,
+            end_date=payload.end_date,
             page=page,
             per_page=per_page
         )
@@ -93,68 +96,34 @@ class UserController:
                 "total_pages": pagination.pages,
                 "has_next": pagination.has_next,
                 "has_prev": pagination.has_prev,
-        },
+            },
         }), 200
 
     @staticmethod
     @jwt_required()
     @role_permission
+    @transactional
     def lock_users():
-        try:
-            payload = LockUsersRequest(**request.get_json())
-        except ValidationError as e:
-            return jsonify(
-                [
-                    {"loc": err["loc"], "msg": err["msg"]}
-                    for err in e.errors()
-                ]
-            ), 422
-
-        result = UserService.lock_users(payload)
-
-        if not result["success"]:
-            return jsonify(
-                [
-                    {"loc": ["user_ids"], "msg": result["message"]}
-                ]
-            ), 400
+        payload = LockUsersRequest(**request.get_json())
+        UserService.lock_users(payload)
 
         return jsonify({
             "success": True,
-            "message": result["message"]
+            "message": "Account updated successfully"
         }), 200
 
     @staticmethod
     @jwt_required()
     @role_permission
+    @transactional
     def create_user():
-        try:
-            payload = CreateUserRequest(**request.form)
-        except ValidationError as e:
-            return jsonify(
-                [
-                    {"loc": err["loc"], "msg": err["msg"]}
-                    for err in e.errors()
-                ]
-            ), 422
-
+        payload = CreateUserRequest(**request.form)
         login_user_id = int(get_jwt_identity())
-
-        result = UserService.create_user(payload, request.files, login_user_id)
-
-        if not result["success"]:
-            return jsonify(
-                [
-                    {
-                        "loc": [result["field"]],
-                        "msg": result["message"]
-                    }
-                ]
-            ), 400
+        user = UserService.create_user(payload, request.files, login_user_id)
 
         return jsonify({
             "success": True,
-            "data": result["data"].to_dict(exclude=["password"]),
+            "data": user.to_dict(exclude=["password"]),
             "message": "User created successfully"
         }), 201
 
@@ -181,62 +150,30 @@ class UserController:
 
     @staticmethod
     @jwt_required()
-    @role_permission
+    # @role_permission
+    @transactional
     def update_user(user_id):
-        try:
-            payload = UpdateUserRequest(**request.form)
-        except ValidationError as e:
-            return jsonify(
-                [
-                    {"loc": err["loc"], "msg": err["msg"]}
-                    for err in e.errors()
-                ]
-            ), 422
-
+        payload = UpdateUserRequest(**request.form)
         login_user_id = int(get_jwt_identity())
-
-        result = UserService.update_user(user_id, payload, request.files, login_user_id)
-
-        if not result["success"]:
-            return jsonify(
-                [
-                    {
-                        "loc": [result["field"]],
-                        "msg": result["message"]
-                    }
-                ]
-            ), result["status"]
+        user = UserService.update_user(
+            user_id, payload, request.files, login_user_id)
 
         return jsonify({
             "success": True,
-            "data": result["data"].to_dict(exclude=["password"]),
+            "data": user.to_dict(exclude=["password"]),
             "message": "User updated successfully"
         }), 200
 
     @staticmethod
     @jwt_required()
     @role_permission
+    @transactional
     def delete_user():
-        try:
-            payload = request.get_json()
-        except ValidationError as e:
-            return jsonify(
-                [
-                    {"loc": err["loc"], "msg": err["msg"]}
-                    for err in e.errors()
-                ]
-            ), 422
-
-        result = UserService.delete_user(payload["user_ids"])
-
-        if not result["success"]:
-            return jsonify(
-                [
-                    {"loc": ["user_ids"], "msg": result["message"]}
-                ]
-            ), 400
+        payload = request.get_json()
+        login_user_id = int(get_jwt_identity())
+        UserService.delete_user(payload["user_ids"], login_user_id)
 
         return jsonify({
             "success": True,
-            "message": result["message"]
+            "message": "User Deleted Successfully"
         }), 200
