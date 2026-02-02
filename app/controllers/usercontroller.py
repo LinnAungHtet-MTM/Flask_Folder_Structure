@@ -1,13 +1,10 @@
 from app.core.transactional import transactional
-from app.models.user import User
-from app.requests.userrequest import CreateUserRequest, LockUsersRequest, UpdateUserRequest, UserSearchRequest
-from app.services.authservice import AuthService
+from app.requests.userrequest import ChangePasswordRequest, CreateUserRequest, LockUsersRequest, UpdateUserRequest, UserSearchRequest
 from app.services.userservice import UserService
 from flask import request, jsonify
 from pydantic import ValidationError
 from flask_jwt_extended import jwt_required, get_jwt_identity
 from app.middlewares.role_permission import role_permission
-
 
 class UserController:
 
@@ -176,4 +173,17 @@ class UserController:
         return jsonify({
             "success": True,
             "message": "User Deleted Successfully"
+        }), 200
+
+    @staticmethod
+    @jwt_required()
+    @role_permission
+    @transactional
+    def change_password(user_id):
+        payload = ChangePasswordRequest(**request.get_json())
+        UserService.change_password(user_id, payload)
+
+        return jsonify({
+            "success": True,
+            "message": "Password Updated Successfully"
         }), 200

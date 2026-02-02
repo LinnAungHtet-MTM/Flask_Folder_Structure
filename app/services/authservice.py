@@ -3,11 +3,11 @@ from app.dao.password_reset_dao import PasswordResetDao
 from app.exceptions.business_exception import BusinessException
 from app.extension import db
 from app.templates.mails.mailservice import send_reset_password_email
-from app.utils.email_util import send_email
 from werkzeug.security import check_password_hash, generate_password_hash
 from flask_jwt_extended import create_access_token, decode_token, create_refresh_token
 from app.dao.userdao import UserDao
 import hashlib
+
 
 class AuthService:
 
@@ -28,7 +28,7 @@ class AuthService:
                 message="Invalid credentials"
             )
 
-        if user.lock_flg :
+        if user.lock_flg:
             raise BusinessException(
                 field="password",
                 message="Your Account has been locked"
@@ -38,37 +38,44 @@ class AuthService:
         user.last_login_at = datetime.utcnow()
 
         access_token = create_access_token(
-            identity = str(user.id),
-            additional_claims = {
+            identity=str(user.id),
+            additional_claims={
                 "role": user.role
             })
 
-        refresh_token = create_refresh_token(identity=str(user.id))
+        refresh_expires = (
+            timedelta(days=30)
+            if payload.remember
+            else timedelta(hours=12)
+        )
+
+        refresh_token = create_refresh_token(
+            identity=str(user.id),
+            expires_delta=refresh_expires
+        )
 
         return {
-            "data": {
-                "access_token": access_token,
-                "refresh_token": refresh_token
-            }
+            "access_token": access_token,
+            "refresh_token": refresh_token,
+            "refresh_expires": refresh_expires
         }
 
 
     # Generate Refresh Token
     @staticmethod
-    def refresh_token(user_id):
+    def refresh_token(user_id: int):
+        # Check if user exists
         user = UserDao.find_by_id(user_id)
-
         if not user:
             return {
                 "success": False,
                 "message": "User not found"
             }
 
+        # Create new access token
         access_token = create_access_token(
             identity=str(user.id),
-            additional_claims={
-                "role": user.role
-            }
+            additional_claims={"role": user.role}
         )
 
         return {

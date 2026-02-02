@@ -14,6 +14,7 @@ api.post("/users/search")(UserController.search_users)
 api.post("/users/create")(UserController.create_user)
 api.put("/users/<int:user_id>")(UserController.update_user)
 api.delete("/users/delete")(UserController.delete_user)
+api.put("/users/<int:user_id>/change_password")(UserController.change_password)
 
 # Post
 api.get("/posts")(PostController.get_all_posts)
@@ -22,3 +23,5 @@ api.post("/posts/search")(PostController.search_posts)
 api.post("/posts/create")(PostController.create_post)
 api.put("/posts/<int:post_id>")(PostController.update_post)
 api.delete("/posts/delete")(PostController.delete_post)
+api.post("/posts/export")(PostController.export_post_csv)
+api.post("/posts/import")(PostController.import_post_csv)

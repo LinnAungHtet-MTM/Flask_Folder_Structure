@@ -1,6 +1,9 @@
+import csv
 from app.dao.postdao import PostDao
 from app.dao.userdao import UserDao
 from app.exceptions.business_exception import BusinessException
+from io import StringIO, TextIOWrapper
+from app.exceptions.csv_validator import PostCsvValidator
 
 
 class PostService:
@@ -131,6 +134,89 @@ class PostService:
         PostDao.delete_posts(posts, login_user_id)
 
 
+    # Post Download
+    @staticmethod
+    def export_post_csv(post_ids):
+        posts = PostDao.find_by_ids(post_ids)
+
+        if not posts:
+            return None
+
+        def generate():
+            buffer = StringIO()         # memory-based file-like object
+            writer = csv.writer(buffer)
+
+            # Header
+            writer.writerow([
+                "ID", "Title", "Description", "Status", "Create User ID", "Updated User ID",
+                "Deleted User ID", "Deleted At", "Created At", "Updated At",
+
+            ])
+            yield buffer.getvalue()
+            buffer.seek(0)
+            buffer.truncate(0)
+
+            # Rows (streaming)
+            for post in posts:
+                writer.writerow([
+                    post.id,
+                    post.title,
+                    post.description,
+                    post.status,
+                    post.create_user_id,
+                    post.updated_user_id,
+                    post.deleted_user_id,
+                    post.deleted_at,
+                    post.created_at.strftime("%Y-%m-%d"),
+                    post.updated_at.strftime("%Y-%m-%d")
+                ])
+                yield buffer.getvalue()
+                buffer.seek(0)
+                buffer.truncate(0)
+
+        return generate
+
+
+    # Post Import
+    @staticmethod
+    def import_post_csv(file, login_user_id):
+        if not file:
+            raise BusinessException(
+                field="file",
+                message="CSV File Field is required"
+            )
+
+        reader = csv.DictReader(TextIOWrapper(file, encoding="utf-8"))
+
+        # Header Validation
+        PostCsvValidator.validate_headers(reader.fieldnames)
+
+        posts_data = []
+        total_count = 0
+
+        for row in reader:
+            total_count += 1
+
+            # Skip empty rows
+            if not any(row.values()):
+                continue
+
+            validated = PostCsvValidator.validate_row(row, total_count)
+            validated["create_user_id"] = login_user_id
+            posts_data.append(validated)
+
+            # Optional: batch insert every 500 rows
+            if len(posts_data) >= 500:
+                PostDao.bulk_insert(posts_data)
+                posts_data = []
+
+        # Insert remaining rows
+        if posts_data:
+            PostDao.bulk_insert(posts_data)
+
+        return total_count
+
+
     # Search post by keyword  (title, desc, status, created_date)
     @staticmethod
     def search_posts(role, user_id, keyword=None, status=None, date=None, page=1, per_page=10):
@@ -138,4 +224,3 @@ class PostService:
             return PostDao.search_posts(keyword, status, date, page, per_page, user_id)
 
         return PostDao.search_posts(keyword, status, date, page, per_page)
-

@@ -1,11 +1,8 @@
 from app.core.transactional import transactional
-from app.exceptions.business_exception import BusinessException
-from app.extension import db
 from app.requests.postrequest import CreatePostRequest, PostSearchRequest, UpdatePostRequest
 from app.services.postservice import PostService
 from pydantic import ValidationError
-from flask import request, jsonify
-from sqlalchemy.exc import SQLAlchemyError
+from flask import request, jsonify, Response
 from flask_jwt_extended import jwt_required, get_jwt_identity, get_jwt
 
 
@@ -161,4 +158,40 @@ class PostController:
                 "has_next": pagination.has_next,
                 "has_prev": pagination.has_prev,
             },
+        }), 200
+
+
+    # Post Download
+    @staticmethod
+    @jwt_required()
+    def export_post_csv():
+        payload = request.get_json()
+        generator = PostService.export_post_csv(payload["post_ids"])
+
+        if not generator:
+            return jsonify([
+                {"loc": ["post_id"], "msg": "Post not found"}
+            ]), 400
+
+        return Response(
+            generator(),
+            mimetype="text/csv",
+            headers={"Content-Disposition": "attachment; filename=posts.csv"}
+        )
+
+
+    # Post Import
+    @staticmethod
+    @jwt_required()
+    @transactional
+    def import_post_csv():
+        file = request.files.get('file')
+        login_user_id = int(get_jwt_identity())
+
+        count = PostService.import_post_csv(file, login_user_id)
+
+        return jsonify({
+            "success": True,
+            "message": f"Imported successfully",
+            "count": count
         }), 200

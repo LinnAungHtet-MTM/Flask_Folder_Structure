@@ -21,9 +21,14 @@ def transactional(func):
 
         except BusinessException as e:
             db.session.rollback()
-            return jsonify(
-                [{"loc": [e.field], "msg": e.message}]
-            ), 400
+            error = {
+                "loc": [e.field],
+                "msg": e.message
+            }
+            if hasattr(e, "row") and e.row:
+                error["row"] = e.row
+            return jsonify([error]), 400
+
 
         except SQLAlchemyError as e:
             db.session.rollback()

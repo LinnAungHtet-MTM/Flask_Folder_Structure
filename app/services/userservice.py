@@ -46,7 +46,8 @@ class UserService:
 
     @staticmethod
     def search_users(name=None, email=None, role=None, start_date=None, end_date=None, page=1, per_page=10):
-        pagination = UserDao.search_users(name, email, role, start_date, end_date, page, per_page)
+        pagination = UserDao.search_users(
+            name, email, role, start_date, end_date, page, per_page)
         return pagination
 
     @staticmethod
@@ -122,7 +123,8 @@ class UserService:
             )
 
         # Email & Name duplicate check
-        user_exist = UserDao.find_by_email_or_name_exclude_current_user(payload.email, payload.name, user.id)
+        user_exist = UserDao.find_by_email_or_name_exclude_current_user(
+            payload.email, payload.name, user.id)
         if user_exist:
             if user_exist.email == payload.email:
                 raise BusinessException(
@@ -154,6 +156,8 @@ class UserService:
             profile_url = upload_result["secure_url"]
             user.profile_path = profile_url
 
+        user.profile_path = profile_url
+
         user = UserDao.update_user(
             user,
             name=payload.name,
@@ -178,3 +182,15 @@ class UserService:
             )
 
         UserDao.delete_users(users, login_user_id)
+
+    @staticmethod
+    def change_password(user_id, payload):
+        user = UserDao.find_by_id(user_id)
+        if not user:
+            raise BusinessException(
+                field="user_id",
+                message="User not found"
+            )
+
+        # Update Password
+        user.password = generate_password_hash(payload.password)

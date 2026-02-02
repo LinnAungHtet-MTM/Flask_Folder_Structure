@@ -73,6 +73,13 @@ class PostDao:
             post.deleted_user_id = deleted_user_id
 
 
+    # Multiple Post Insert
+    @staticmethod
+    def bulk_insert(posts_data: list[dict]):
+        objs = [Post(**data) for data in posts_data]
+        db.session.bulk_save_objects(objs)
+
+
     # Search post by keyword  (title, desc, status, created_date)
     @staticmethod
     def search_posts(keyword=None, status=None, date=None, page=1, per_page=10, user_id=None):

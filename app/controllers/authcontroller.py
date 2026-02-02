@@ -1,10 +1,10 @@
 from app.core.transactional import transactional
-from app.extension import db
 from app.services.authservice import AuthService
 from flask import request, jsonify
 from pydantic import ValidationError
-from flask_jwt_extended import jwt_required, get_jwt_identity
+from flask_jwt_extended import jwt_required, get_jwt_identity, set_refresh_cookies, unset_jwt_cookies
 from app.requests.authrequest import ForgotPasswordRequest, LoginRequest, ResetPasswordRequest, VerifyResetTokenRequest
+
 
 class AuthController:
 
@@ -14,18 +14,35 @@ class AuthController:
     def login():
         payload = LoginRequest(**request.get_json())
         result = AuthService.login(payload)
-        db.session.commit()
 
-        return jsonify({
+        response = jsonify({
             "success": True,
-            "data": result["data"],
-            "message": "Login successful"
-        }), 200
+            "message": "Login successful",
+            "data": {
+                "access_token": result["access_token"]
+            }
+        })
+
+        if payload.remember:
+            # persistent cookie (30 days)
+            set_refresh_cookies(
+                response,
+                result["refresh_token"],
+                max_age=int(result["refresh_expires"].total_seconds())
+            )
+        else:
+            # session cookie (browser close = logout)
+            set_refresh_cookies(
+                response,
+                result["refresh_token"]
+            )
+
+        return response, 200
 
 
     # Generate Refresh Token
     @staticmethod
-    @jwt_required(refresh=True)
+    @jwt_required(refresh=True, locations=["cookies"])
     def refresh():
         user_id = int(get_jwt_identity())
         result = AuthService.refresh_token(user_id)
@@ -38,7 +55,8 @@ class AuthController:
 
         return jsonify({
             "success": True,
-            "data": result["data"]
+            "message": "Access token refreshed",
+            "access_token": result["data"]["access_token"]
         }), 200
 
 
@@ -102,3 +120,16 @@ class AuthController:
             "success": True,
             "message": "Password Updated Successfully"
         }), 200
+
+
+    # Logout
+    @staticmethod
+    @jwt_required()
+    def logout():
+        response = jsonify({
+            "success": True,
+            "message": "Logged out successfully"
+        })
+
+        unset_jwt_cookies(response)
+        return response, 200
