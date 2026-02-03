@@ -10,7 +10,7 @@ class PostService:
 
     # Get All Posts (Without deleted post)
     @staticmethod
-    def get_all_posts(page, per_page, role, login_user_id):
+    def get_all_posts(page, per_page, role=None, login_user_id=None):
         if role:             # normal user
             return PostDao.get_all_posts(page, per_page, login_user_id)
 

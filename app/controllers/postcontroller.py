@@ -10,11 +10,12 @@ class PostController:
 
     # Get All Posts (Without deleted post)
     @staticmethod
-    @jwt_required()
+    @jwt_required(optional=True)
     def get_all_posts():
         claims = get_jwt()
+        identity = get_jwt_identity()
         role = claims.get("role")
-        login_user_id = int(get_jwt_identity())
+        login_user_id = int(identity) if identity else None
         page = request.args.get("page", 1, type=int)
         per_page = request.args.get("per_page", 10, type=int)
         pagination = PostService.get_all_posts(
@@ -163,7 +164,7 @@ class PostController:
 
     # Post Download
     @staticmethod
-    @jwt_required()
+    @jwt_required(optional=True)
     def export_post_csv():
         payload = request.get_json()
         generator = PostService.export_post_csv(payload["post_ids"])

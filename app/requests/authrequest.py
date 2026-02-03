@@ -8,6 +8,32 @@ class LoginRequest(BaseModel):
     password: str
     remember: bool
 
+    # Email length
+    @field_validator("email")
+    @classmethod
+    def validate_email_length(cls, v):
+        if len(v) > 50:
+            raise PydanticCustomError(
+                "email_too_long",
+                "Email must not be greater than 50 characters"
+            )
+        return v
+
+    # Password format
+    @field_validator("password")
+    @classmethod
+    def validate_password(cls, v):
+        pattern = r"^(?=.*[a-z])(?=.*[A-Z])(?=.*\d).{6,20}$"
+
+        if not re.match(pattern, v):
+            raise PydanticCustomError(
+                "password_invalid",
+                "Password must be 6–20 characters and include at least "
+                "one uppercase, lowercase letter & one digit"
+            )
+
+        return v
+
 
 class ForgotPasswordRequest(BaseModel):
     email: EmailStr
