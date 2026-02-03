@@ -37,7 +37,6 @@ instance/
 # Migrations
 # =========================
 migrations/versions/*.pyc
-alembic.ini
 
 # =========================
 # Tests / coverage
