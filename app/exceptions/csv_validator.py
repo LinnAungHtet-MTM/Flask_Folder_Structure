@@ -7,6 +7,7 @@ REQUIRED_HEADERS = {"title", "description", "status"}
 
 class PostCsvValidator:
 
+    # Validate CSV Header
     @staticmethod
     def validate_headers(headers: list[str]):
         if not headers:
@@ -21,6 +22,7 @@ class PostCsvValidator:
                 message=f"CSV headers must contain: {', '.join(REQUIRED_HEADERS)}"
             )
 
+    # Validate CSV Row
     @staticmethod
     def validate_row(row: dict, row_number: int):
         title = (row.get("title") or "").strip()

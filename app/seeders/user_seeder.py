@@ -5,6 +5,7 @@ from werkzeug.security import generate_password_hash
 
 def user_seeder():
     try:
+        # Create Admin Info
         user = User(
             name="admin",
             email="admin@gmail.com",
